@@ -1,5 +1,6 @@
 package com.booleanuk.api.cinema.Controllers;
 
+import com.booleanuk.api.cinema.Response;
 import com.booleanuk.api.cinema.models.Customer;
 import com.booleanuk.api.cinema.repository.CustomerRepository;
 import com.booleanuk.api.cinema.models.Ticket;
@@ -22,13 +23,21 @@ public class CustomerController {
     private CustomerRepository customerRepository;
 
     @GetMapping
-    public List<Customer> getAll() {
-        return this.customerRepository.findAll();
+    public ResponseEntity<Object> getAll() {
+        return Response.generateResponse(HttpStatus.OK, this.customerRepository.findAll());
     }
 
     @GetMapping("{id}")
-    public Customer getById(@PathVariable("id") Integer id) {
-        return this.customerRepository.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+    public ResponseEntity<Object> getById(@PathVariable("id") Integer id) {
+        try{
+            Customer customer = this.customerRepository
+                    .findById(id)
+                    .orElseThrow(Exception::new);
+            return Response.generateResponse(HttpStatus.OK, customer);
+        }
+        catch (Exception e){
+            return Response.generateError(HttpStatus.NOT_FOUND);
+        }
     }
 
     @PostMapping
@@ -41,10 +50,12 @@ public class CustomerController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Customer> updateOneCustomer(@PathVariable int id, @RequestBody Customer customer) {
-        Customer customerToUpdate = this.customerRepository
-                .findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+    public ResponseEntity<Object> updateOneCustomer(@PathVariable int id, @RequestBody Customer customer) {
+        try {
+            Customer customerToUpdate = this.customerRepository
+                    .findById(id)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+
 
         if (customer.getName() == null || customer.getPhone() == null || customer.getEmail() == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
@@ -56,7 +67,10 @@ public class CustomerController {
         customerToUpdate.setEmail(customer.getEmail());
         customerToUpdate.setUpdatedAt(ZonedDateTime.ofInstant(Instant.now(), ZoneId.of("CET")).format(DateTimeFormatter.ISO_DATE_TIME).toString());
 
-        return new ResponseEntity<>(this.customerRepository.save(customerToUpdate), HttpStatus.CREATED);
+        return new ResponseEntity<>(this.customerRepository.save(customerToUpdate), HttpStatus.CREATED);}
+        catch (Exception e){
+            return Response.generateError(HttpStatus.NOT_FOUND);
+        }
     }
 
     @DeleteMapping("/{id}")
@@ -66,6 +80,6 @@ public class CustomerController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         customerToDelete.setTickets(new ArrayList<Ticket>());
         this.customerRepository.delete(customerToDelete);
-        return new ResponseEntity<>(customerToDelete, HttpStatus.ACCEPTED);
+        return new ResponseEntity<>(customerToDelete, HttpStatus.OK);
     }
 }
